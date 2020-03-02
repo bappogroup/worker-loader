@@ -8,6 +8,12 @@ const getWorker = (file, content, options) => {
 
   const publicWorkerPath = `${publicPath} + ${JSON.stringify(file)}`;
 
+  const defineGlobalContent = options.defineGlobal
+    ? `\`${Object.entries(options.defineGlobal)
+        .map(([name, value]) => `self.${name}=\${JSON.stringify(${value})};`)
+        .join('\n')}\``
+    : '';
+
   if (options.inline) {
     const InlineWorkerPath = JSON.stringify(
       `!!${path.join(__dirname, 'InlineWorker.js')}`
@@ -16,22 +22,20 @@ const getWorker = (file, content, options) => {
     const fallbackWorkerPath =
       options.fallback === false ? 'null' : publicWorkerPath;
 
-    return `require(${InlineWorkerPath})(${JSON.stringify(
+    return `require(${InlineWorkerPath})(${defineGlobalContent} + ${JSON.stringify(
       content
     )}, ${fallbackWorkerPath})`;
   }
 
   if (options.crossOrigin) {
-    const InlineWorkerPath = JSON.stringify(`!!${
-      path.join(__dirname, 'InlineWorker.js')
-    }`);
+    const InlineWorkerPath = JSON.stringify(
+      `!!${path.join(__dirname, 'InlineWorker.js')}`
+    );
 
-    const fallbackWorkerPath = options.fallback === false
-      ? 'null'
-      : publicWorkerPath;
+    const fallbackWorkerPath =
+      options.fallback === false ? 'null' : publicWorkerPath;
 
-
-    return `require(${InlineWorkerPath})('importScripts("' + ${publicWorkerPath} + '")', ${fallbackWorkerPath})`;
+    return `require(${InlineWorkerPath})(${defineGlobalContent} + 'importScripts("' + ${publicWorkerPath} + '")', ${fallbackWorkerPath})`;
   }
 
   return `new Worker(${publicWorkerPath})`;
